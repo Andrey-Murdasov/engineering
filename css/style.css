@@ -258,3 +258,8 @@ footer {
   color: #666666;
   font-size: 14px;
 }
+
+.custom-card a {
+  text-decoration: none !important;
+}
+
