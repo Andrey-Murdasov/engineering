@@ -184,7 +184,7 @@
       }
     });
 
-        // Загрузка списка проектов для управления
+    // Загрузка списка проектов для управления
     async function loadManageList() {
       const listEl = document.getElementById("manage-list");
       try {
@@ -195,8 +195,10 @@
           return;
         }
         listEl.innerHTML = projects.map((p, idx) => `
-          <div style="border: 2px solid #333; padding: 10px; background: #f9f9f9;">
-            <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">${p.title}</div>
+          <div style="border: 2px solid #333; padding: 10px; background: ${p.hidden ? '#e0e0e0' : '#f9f9f9'}; opacity: ${p.hidden ? '0.75' : '1'};">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">
+              ${p.hidden ? '🙈 [СКРЫТ] ' : ''}${p.title}
+            </div>
             <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
               <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
                 <option value="obmer" ${p.category === 'obmer' ? 'selected' : ''}>📐 Обмеры</option>
@@ -204,6 +206,9 @@
                 <option value="avtonomka" ${p.category === 'avtonomka' ? 'selected' : ''}>🔋 Автономка</option>
                 <option value="remont" ${p.category === 'remont' ? 'selected' : ''}>🦺 Ремонт</option>
               </select>
+              <button type="button" onclick="toggleHideProject(${idx})" style="background: ${p.hidden ? '#47ed84' : '#f7e83e'}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                ${p.hidden ? '👁️ Показать' : '🙈 Скрыть'}
+              </button>
               <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
                 🗑️ Удалить
               </button>
@@ -212,6 +217,24 @@
         `).join("");
       } catch (e) {
         listEl.innerHTML = "<small style='color:#666;'>Не удалось загрузить список.</small>";
+      }
+    }
+
+    // Скрыть или показать проект на сайте
+    async function toggleHideProject(index) {
+      const token = tokenInput.value.trim();
+      if (!token) return showStatus("Введите GitHub Token!", "status-err");
+      showStatus("⏳ Меняю видимость проекта...", "status-load");
+      try {
+        const existing = await ghApi("projects.json", "GET", null, token);
+        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
+        projects[index].hidden = !projects[index].hidden;
+        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
+        await ghApi("projects.json", "PUT", { message: "Toggle project visibility", content: updatedBase64, sha: existing.sha }, token);
+        showStatus(projects[index].hidden ? "🙈 Проект скрыт с сайта!" : "👁️ Проект снова виден на сайте!", "status-ok");
+        loadManageList();
+      } catch (err) {
+        showStatus("❌ " + err.message, "status-err");
       }
     }
 
@@ -227,7 +250,7 @@
         const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
         await ghApi("projects.json", "PUT", { message: "Move project category", content: updatedBase64, sha: existing.sha }, token);
         showStatus("✅ Раздел изменён! Обновится на сайте через 30 секунд.", "status-ok");
-        loadManageList();
+        ();
       } catch (err) {
         showStatus("❌ " + err.message, "status-err");
       }
@@ -246,13 +269,13 @@
         const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
         await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha }, token);
         showStatus("✅ Проект удалён с сайта!", "status-ok");
-        loadManageList();
+        ();
       } catch (err) {
         showStatus("❌ " + err.message, "status-err");
       }
     }
 
-    loadManageList();
+    ();
 
   </script>
 </body>
