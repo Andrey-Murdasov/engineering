@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const response = await fetch(jsonPath + "?v=" + Date.now());
     if (!response.ok) throw new Error("Файл проектов пока пуст");
     const allProjects = await response.json();
-    const filtered = allProjects.filter(p => p.category === category);
+    const filtered = allProjects.filter(p => p.category === category && !p.hidden);
 
     if (filtered.length === 0) {
       container.innerHTML = '<p style="color:#666;">Примеры работ в этом разделе скоро появятся.</p>';
