@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     for (const item of filtered) {
       const rawImgs = Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []);
       const imgs = rawImgs.map(src => src.startsWith("http") ? src : assetPrefix + src);
-      const mainImg = imgs || "";
+      const mainImg = imgs[0] || "";
 
       const card = document.createElement("div");
       card.className = "project-card";
