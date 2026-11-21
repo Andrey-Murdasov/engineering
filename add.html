@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Добавить проект на сайт</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.png" type="image/png">
+
   <style>
     body { padding-top: 25px; background: #eaeaea; }
     .admin-box { max-width: 540px; margin: 0 auto 40px auto; background: #fff; border: 3px solid #111; box-shadow: 8px 8px 0 #111; padding: 24px; }
@@ -78,7 +80,7 @@
     }
 
     // Сжатие фото прямо в браузере телефона перед отправкой
-    function compressImage(file, maxWidth = 1400, quality = 0.82) {
+    function compressImage(file, maxWidth = 1200, quality = 0.75) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -90,7 +92,7 @@
             canvas.width = w; canvas.height = h;
             canvas.getContext("2d").drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL("image/jpeg", quality);
-            resolve(dataUrl.split(",")[1]); // Возвращаем чистый base64
+            resolve(dataUrl.split(",")[1]);
           };
           img.src = e.target.result;
         };
