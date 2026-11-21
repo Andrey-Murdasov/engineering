@@ -26,7 +26,6 @@
       <h2 style="margin-bottom: 5px;">📸 Управление портфолио</h2>
       <p style="font-size: 14px; color: #555; margin-bottom: 18px;">Добавление, перенос, скрытие и удаление объектов с ПК или телефона.</p>
 
-      <!-- БЛОК ВХОДА (КАЛИТКА) -->
       <div id="gate-box" class="gate-box gate-closed">
         <div id="gate-closed-view">
           <div style="font-weight: 800; color: #b71c1c; margin-bottom: 8px;">🔒 Калитка закрыта — введите GitHub Token</div>
@@ -44,7 +43,6 @@
         </div>
       </div>
 
-      <!-- ФОРМА ДОБАВЛЕНИЯ НОВОГО ПРОЕКТА -->
       <form id="project-form">
         <label>1. Раздел сайта:</label>
         <select id="p-category" class="retro-input" required>
@@ -73,7 +71,6 @@
 
       <div id="status" class="status-msg"></div>
 
-      <!-- СПИСОК ЗАГРУЖЕННЫХ ПРОЕКТОВ -->
       <hr style="margin: 28px 0; border-top: 2px dashed #333;">
       <h3 style="font-size: 18px; margin-bottom: 12px;">📋 Загруженные проекты (перенос / скрытие / удаление)</h3>
       <div id="manage-list" style="display: flex; flex-direction: column; gap: 10px;">
@@ -86,230 +83,6 @@
     </div>
   </div>
 
-  <script>
-    const TOKEN_KEY = "gh_portfolio_token";
-    const API_BASE = "https://github.com";
-
-    const gateBox = document.getElementById("gate-box");
-    const closedView = document.getElementById("gate-closed-view");
-    const openView = document.getElementById("gate-open-view");
-    const tokenInput = document.getElementById("gh-token");
-
-    function showStatus(text, type) {
-      const el = document.getElementById("status");
-      el.textContent = text;
-      el.className = "status-msg " + type;
-    }
-
-    function setGateState(isOpen) {
-      if (isOpen) {
-        gateBox.className = "gate-box gate-open";
-        closedView.style.display = "none";
-        openView.style.display = "flex";
-      } else {
-        gateBox.className = "gate-box gate-closed";
-        closedView.style.display = "block";
-        openView.style.display = "none";
-      }
-    }
-
-    function getToken() {
-      return (localStorage.getItem(TOKEN_KEY) || tokenInput.value || "").trim();
-    }
-
-    // Проверка токена при входе или загрузке страницы
-    async function verifyAndOpenGate(tokenToCheck, isManualClick = false) {
-      if (!tokenToCheck) {
-        setGateState(false);
-        return;
-      }
-      if (isManualClick) showStatus("⏳ Проверяю токен на GitHub...", "status-load");
-      try {
-        const res = await fetch("https://github.com", {
-          headers: { "Authorization": `Bearer ${tokenToCheck}`, "Accept": "application/vnd.github+json" }
-        });
-        if (!res.ok) throw new Error("Токен не подошёл (код " + res.status + ")");
-        localStorage.setItem(TOKEN_KEY, tokenToCheck);
-        setGateState(true);
-        if (isManualClick) showStatus("🟢 Калитка открыта! Токен сохранён в этом браузере.", "status-ok");
-      } catch (err) {
-        localStorage.removeItem(TOKEN_KEY);
-        setGateState(false);
-        if (isManualClick) showStatus("❌ " + err.message, "status-err");
-      }
-    }
-
-    document.getElementById("login-btn").addEventListener("click", () => {
-      verifyAndOpenGate(tokenInput.value.trim(), true);
-    });
-
-    document.getElementById("logout-btn").addEventListener("click", () => {
-      localStorage.removeItem(TOKEN_KEY);
-      tokenInput.value = "";
-      setGateState(false);
-      showStatus("🔒 Вы вышли из системы. Введите новый токен.", "status-load");
-    });
-
-    // Сжатие фото перед отправкой
-    function compressImage(file, maxWidth = 1200, quality = 0.78) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            let w = img.width, h = img.height;
-            if (w > maxWidth) { h = Math.round((h * maxWidth) / w); w = maxWidth; }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-            const dataUrl = canvas.toDataURL("image/jpeg", quality);
-            resolve(dataUrl.split(",")[1]);
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function ghApi(path, method = "GET", body = null) {
-      const token = getToken();
-      if (!token) throw new Error("Сначала откройте калитку (введите GitHub Token)!");
-      const res = await fetch(API_BASE + path, {
-        method,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Accept": "application/vnd.github+json",
-          "Content-Type": "application/json"
-        },
-        body: body ? JSON.stringify(body) : null
-      });
-      if (res.status === 401) {
-        localStorage.removeItem(TOKEN_KEY);
-        setGateState(false);
-        throw new Error("Токен недействителен (401). Введите его заново.");
-      }
-      if (!res.ok) throw new Error("Ошибка GitHub (" + res.status + ")");
-      return res.json();
-    }
-
-    // Публикация нового проекта
-    document.getElementById("project-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const files = document.getElementById("p-photos").files;
-      if (!files.length) return showStatus("Выберите хотя бы одно фото!", "status-err");
-
-      const btn = document.getElementById("submit-btn");
-      btn.disabled = true;
-
-      try {
-        const uploadedPaths = [];
-        const timestamp = Date.now();
-
-        for (let i = 0; i < files.length; i++) {
-          showStatus(`⏳ Сжимаю и загружаю фото ${i + 1} из ${files.length}...`, "status-load");
-          const base64Content = await compressImage(files[i]);
-          const fileName = `img/projects/${timestamp}_${i + 1}.jpg`;
-          await ghApi(fileName, "PUT", {
-            message: `Add photo ${timestamp}_${i + 1}`,
-            content: base64Content
-          });
-          uploadedPaths.push(fileName);
-        }
-
-        showStatus("⏳ Обновляю ленту проектов...", "status-load");
-        let projects = [];
-        let sha = null;
-        try {
-          const existing = await ghApi("projects.json", "GET");
-          sha = existing.sha;
-          projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        } catch (err) {
-          projects = [];
-        }
-
-        projects.unshift({
-          category: document.getElementById("p-category").value,
-          title: document.getElementById("p-title").value.trim(),
-        location: document.getElementById("p-location").value.trim(),
-        description: document.getElementById("p-desc").value.trim(),
-        images: uploadedPaths,
-        hidden: false,
-        date: new Date().toLocaleDateString("ru-RU")
-        });
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        const putBody = { message: "Add project", content: updatedBase64 };
-        if (sha) putBody.sha = sha;
-        await ghApi("projects.json", "PUT", putBody);
-        showStatus("✅ Готово! Проект опубликован (появится на сайте через 30 сек).", "status-ok");
-        document.getElementById("project-form").reset();
-        loadManageList();
-        } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-        } finally {
-        btn.disabled = false;
-        }
-        });
-        // Загрузка списка проектов
-        async function loadManageList() {
-        const listEl = document.getElementById("manage-list");
-        try {
-        const res = await fetch("projects.json?v=" + Date.now());
-        const projects = await res.json();
-        if (!projects.length) {
-        listEl.innerHTML = "Пока нет ни одного проекта.";
-        return;
-        }
-        listEl.innerHTML = projects.map((p, idx) => <div style="border: 2px solid #333; padding: 10px; background: ${p.hidden ? '#e0e0e0' : '#f9f9f9'}; opacity: ${p.hidden ? '0.8' : '1'};"> <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;"> ${p.hidden ? '🙈 [СКРЫТ] ' : ''}${p.title} </div> <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"> <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;"> <option value="obmer" ${p.category === 'obmer' ? 'selected' : ''}>📐 Обмеры</option> <option value="electrika" ${p.category === 'electrika' ? 'selected' : ''}>⚡ Электрика</option> <option value="avtonomka" ${p.category === 'avtonomka' ? 'selected' : ''}>🔋 Автономка</option> <option value="remont" ${p.category === 'remont' ? 'selected' : ''}>🦺 Ремонт</option> </select> <button type="button" onclick="toggleHideProject(${idx})" style="background: ${p.hidden ? '#47ed84' : '#f7e83e'}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;"> ${p.hidden ? '👁️ Показать' : '🙈 Скрыть'} </button> <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;"> 🗑️ Удалить </button> </div> </div>).join("");
-        } catch (e) {
-        listEl.innerHTML = "Список проектов пуст или загружается.";
-        }
-        }
-        // Перенос
-        async function moveProject(index, newCategory) {
-        showStatus("⏳ Переношу проект...", "status-load");
-        try {
-        const existing = await ghApi("projects.json", "GET");
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects[index].category = newCategory;
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Move project", content: updatedBase64, sha: existing.sha });
-        showStatus("✅ Проект перенесён!", "status-ok");
-        loadManageList();
-        } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-        }
-        }
-        // Скрытие / показ
-        async function toggleHideProject(index) {
-        showStatus("⏳ Меняю видимость...", "status-load");
-        try {
-        const existing = await ghApi("projects.json", "GET");
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects[index].hidden = !projects[index].hidden;
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Toggle visibility", content: updatedBase64, sha: existing.sha });
-        showStatus(projects[index].hidden ? "🙈 Проект скрыт с сайта!" : "👁️ Проект снова виден!", "status-ok");
-        loadManageList();
-        } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-        }
-        }
-        // Удаление
-        async function deleteProject(index) {
-        if (!confirm("Точно удалить этот проект?")) return;
-        showStatus("⏳ Удаляю проект...", "status-load");
-        try {
-        const existing = await ghApi("projects.json", "GET");
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects.splice(index, 1);
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha });
-        showStatus("✅ Проект удалён!", "status-ok");
-        loadManageList();
-        } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-        }
-        }
-        // Автозапуск при открытии
-        verifyAndOpenGate(localStorage.getItem(TOKEN_KEY), false);
-        loadManageList();
+  <script src="js/admin.js"></script>
+</body>
+</html>
