@@ -1,5 +1,7 @@
 const TOKEN_KEY = "gh_portfolio_token";
-const API_BASE = "https://github.com";
+const API_BASE = "https:__api.github.com_repos_Andrey-Murdasov_engineering_contents_".replace(/_/g, "/");
+const REPO_URL = "https:__api.github.com_repos_Andrey-Murdasov_engineering".replace(/_/g, "/");
+
 
 const gateBox = document.getElementById("gate-box");
 const closedView = document.getElementById("gate-closed-view");
@@ -29,7 +31,7 @@ async function verifyAndOpenGate(tokenToCheck, isManual) {
   }
   if (isManual) showStatus("⏳ Проверяю токен...", "status-load");
   try {
-    const res = await fetch("https://github.com", {
+    const res = await fetch(REPO_URL, {
       headers: { "Authorization": "Bearer " + tokenToCheck, "Accept": "application/vnd.github+json" }
     });
     if (!res.ok) throw new Error("Токен не подошёл (код " + res.status + ")");
