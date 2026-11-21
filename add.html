@@ -101,8 +101,7 @@
     }
 
     async function ghApi(path, method = "GET", body = null, token) {
-      constres=awaitfetch(`https://api.github.com/repos/Andrey-Murdasov/engineering/contents/${path}`,{
-
+      const res=awaitfetch(`https://api.github.com/repos/Andrey-Murdasov/engineering/contents/${path}`,{
         method,
         headers: {
           "Authorization": `Bearer ${token}`,
