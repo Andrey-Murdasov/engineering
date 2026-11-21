@@ -3,13 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Добавить проект на сайт</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Управление портфолио — Андрей Мурдасов</title>
   <link rel="icon" href="img/favicon.png" type="image/png">
-
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     body { padding-top: 25px; background: #eaeaea; }
-    .admin-box { max-width: 540px; margin: 0 auto 40px auto; background: #fff; border: 3px solid #111; box-shadow: 8px 8px 0 #111; padding: 24px; }
+    .admin-box { max-width: 560px; margin: 0 auto 40px auto; background: #fff; border: 3px solid #111; box-shadow: 8px 8px 0 #111; padding: 24px; }
+    .gate-box { padding: 14px; border: 3px solid #111; margin-bottom: 22px; }
+    .gate-closed { background: #ffebee; }
+    .gate-open { background: #e8f5e9; }
     .status-msg { margin-top: 15px; font-weight: 700; padding: 12px; border: 2px solid #111; display: none; }
     .status-ok { background: #47ed84; display: block; }
     .status-err { background: #ff8a80; display: block; }
@@ -20,15 +23,28 @@
 <body>
   <div class="container">
     <div class="admin-box">
-      <h2 style="margin-bottom: 5px;">📸 Новый проект в портфолио</h2>
-      <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Заполните поля и выберите фото с телефона — они сами сожмутся и появятся на сайте.</p>
+      <h2 style="margin-bottom: 5px;">📸 Управление портфолио</h2>
+      <p style="font-size: 14px; color: #555; margin-bottom: 18px;">Добавление, перенос, скрытие и удаление объектов с ПК или телефона.</p>
 
-      <div id="token-block" style="background: #f5f5f5; padding: 12px; border: 2px dashed #333; margin-bottom: 20px;">
-        <label>🔑 GitHub Token (вводится 1 раз на телефоне):</label>
-        <input type="password" id="gh-token" class="retro-input" style="margin-bottom: 5px;" placeholder="ghp_xxxxxxxxxxxx">
-        <small style="color: #666;">Сохраняется только в браузере вашего телефона.</small>
+      <!-- БЛОК ВХОДА (КАЛИТКА) -->
+      <div id="gate-box" class="gate-box gate-closed">
+        <div id="gate-closed-view">
+          <div style="font-weight: 800; color: #b71c1c; margin-bottom: 8px;">🔒 Калитка закрыта — введите GitHub Token</div>
+          <input type="text" id="gh-token" autocomplete="off" class="retro-input" style="margin-bottom: 10px;" placeholder="github_pat_xxxxxxxxxxxx">
+          <button type="button" id="login-btn" class="retro-btn" style="background: #111; color: #fff; width: 100%;">
+            🔑 Открыть доступ и проверить токен
+          </button>
+        </div>
+
+        <div id="gate-open-view" style="display: none; justify-content: space-between; align-items: center; gap: 10px;">
+          <div style="font-weight: 800; color: #1b5e20;">🟢 Калитка открыта! Вы в системе</div>
+          <button type="button" id="logout-btn" style="background: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer;">
+            Выйти / сменить
+          </button>
+        </div>
       </div>
 
+      <!-- ФОРМА ДОБАВЛЕНИЯ НОВОГО ПРОЕКТА -->
       <form id="project-form">
         <label>1. Раздел сайта:</label>
         <select id="p-category" class="retro-input" required>
@@ -55,29 +71,29 @@
         </button>
       </form>
 
-      <hr style="margin: 25px 0; border-top: 2px dashed #333;">
-      <h3 style="font-size: 18px; margin-bottom: 12px;">📋 Загруженные проекты (перенос / удаление)</h3>
+      <div id="status" class="status-msg"></div>
+
+      <!-- СПИСОК ЗАГРУЖЕННЫХ ПРОЕКТОВ -->
+      <hr style="margin: 28px 0; border-top: 2px dashed #333;">
+      <h3 style="font-size: 18px; margin-bottom: 12px;">📋 Загруженные проекты (перенос / скрытие / удаление)</h3>
       <div id="manage-list" style="display: flex; flex-direction: column; gap: 10px;">
-      <small style="color: #666;">Загрузка списка...</small>
+        <small style="color: #666;">Загрузка списка...</small>
       </div>
 
-      <div id="status" class="status-msg"></div>
-      <div style="margin-top: 20px; text-align: center;">
+      <div style="margin-top: 25px; text-align: center;">
         <a href="index.html" style="font-weight: 700; color: #111;">← Вернуться на главную</a>
       </div>
     </div>
   </div>
 
   <script>
-    const OWNER = "Andrey-Murdasov";
-    const REPO = "engineering"; // Имя нового репозитория
+    const TOKEN_KEY = "gh_portfolio_token";
+    const API_BASE = "https://github.com";
 
+    const gateBox = document.getElementById("gate-box");
+    const closedView = document.getElementById("gate-closed-view");
+    const openView = document.getElementById("gate-open-view");
     const tokenInput = document.getElementById("gh-token");
-    const savedToken = localStorage.getItem("gh_portfolio_token");
-    if (savedToken) {
-      tokenInput.value = savedToken;
-      document.getElementById("token-block").style.display = "none";
-    }
 
     function showStatus(text, type) {
       const el = document.getElementById("status");
@@ -85,8 +101,57 @@
       el.className = "status-msg " + type;
     }
 
-    // Сжатие фото прямо в браузере телефона перед отправкой
-    function compressImage(file, maxWidth = 1200, quality = 0.75) {
+    function setGateState(isOpen) {
+      if (isOpen) {
+        gateBox.className = "gate-box gate-open";
+        closedView.style.display = "none";
+        openView.style.display = "flex";
+      } else {
+        gateBox.className = "gate-box gate-closed";
+        closedView.style.display = "block";
+        openView.style.display = "none";
+      }
+    }
+
+    function getToken() {
+      return (localStorage.getItem(TOKEN_KEY) || tokenInput.value || "").trim();
+    }
+
+    // Проверка токена при входе или загрузке страницы
+    async function verifyAndOpenGate(tokenToCheck, isManualClick = false) {
+      if (!tokenToCheck) {
+        setGateState(false);
+        return;
+      }
+      if (isManualClick) showStatus("⏳ Проверяю токен на GitHub...", "status-load");
+      try {
+        const res = await fetch("https://github.com", {
+          headers: { "Authorization": `Bearer ${tokenToCheck}`, "Accept": "application/vnd.github+json" }
+        });
+        if (!res.ok) throw new Error("Токен не подошёл (код " + res.status + ")");
+        localStorage.setItem(TOKEN_KEY, tokenToCheck);
+        setGateState(true);
+        if (isManualClick) showStatus("🟢 Калитка открыта! Токен сохранён в этом браузере.", "status-ok");
+      } catch (err) {
+        localStorage.removeItem(TOKEN_KEY);
+        setGateState(false);
+        if (isManualClick) showStatus("❌ " + err.message, "status-err");
+      }
+    }
+
+    document.getElementById("login-btn").addEventListener("click", () => {
+      verifyAndOpenGate(tokenInput.value.trim(), true);
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.removeItem(TOKEN_KEY);
+      tokenInput.value = "";
+      setGateState(false);
+      showStatus("🔒 Вы вышли из системы. Введите новый токен.", "status-load");
+    });
+
+    // Сжатие фото перед отправкой
+    function compressImage(file, maxWidth = 1200, quality = 0.78) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -106,8 +171,10 @@
       });
     }
 
-    async function ghApi(path, method = "GET", body = null, token) {
-      const res=await fetch(`https://api.github.com/repos/Andrey-Murdasov/engineering/contents/${path}`,{
+    async function ghApi(path, method = "GET", body = null) {
+      const token = getToken();
+      if (!token) throw new Error("Сначала откройте калитку (введите GitHub Token)!");
+      const res = await fetch(API_BASE + path, {
         method,
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -116,16 +183,18 @@
         },
         body: body ? JSON.stringify(body) : null
       });
-      if (!res.ok) throw new Error(`Ошибка GitHub (${res.status}): проверьте токен или имя репозитория`);
+      if (res.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
+        setGateState(false);
+        throw new Error("Токен недействителен (401). Введите его заново.");
+      }
+      if (!res.ok) throw new Error("Ошибка GitHub (" + res.status + ")");
       return res.json();
     }
 
+    // Публикация нового проекта
     document.getElementById("project-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const token = tokenInput.value.trim();
-      if (!token) return showStatus("Введите GitHub Token!", "status-err");
-      localStorage.setItem("gh_portfolio_token", token);
-
       const files = document.getElementById("p-photos").files;
       if (!files.length) return showStatus("Выберите хотя бы одно фото!", "status-err");
 
@@ -141,142 +210,22 @@
           const base64Content = await compressImage(files[i]);
           const fileName = `img/projects/${timestamp}_${i + 1}.jpg`;
           await ghApi(fileName, "PUT", {
-            message: `Add project photo ${timestamp}_${i + 1}`,
+            message: `Add photo ${timestamp}_${i + 1}`,
             content: base64Content
-          }, token);
+          });
           uploadedPaths.push(fileName);
         }
 
-        showStatus("⏳ Обновляю ленту проектов на сайте...", "status-load");
+        showStatus("⏳ Обновляю ленту проектов...", "status-load");
         let projects = [];
         let sha = null;
         try {
-          const existing = await ghApi("projects.json", "GET", null, token);
+          const existing = await ghApi("projects.json", "GET");
           sha = existing.sha;
-          const decoded = decodeURIComponent(escape(atob(existing.content)));
-          projects = JSON.parse(decoded);
+          projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
         } catch (err) {
-          projects = []; // Если файла еще нет, создадим новый
+          projects = [];
         }
 
-        // Добавляем новый проект в самое начало списка
         projects.unshift({
           category: document.getElementById("p-category").value,
-          title: document.getElementById("p-title").value.trim(),
-          location: document.getElementById("p-location").value.trim(),
-          description: document.getElementById("p-desc").value.trim(),
-          images: uploadedPaths,
-          date: new Date().toLocaleDateString("ru-RU")
-        });
-
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        const putBody = { message: "Add new project via mobile form", content: updatedBase64 };
-        if (sha) putBody.sha = sha;
-
-        await ghApi("projects.json", "PUT", putBody, token);
-
-        showStatus("✅ Готово! Проект опубликован и появится на сайте через 30–60 секунд.", "status-ok");
-        document.getElementById("project-form").reset();
-      } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // Загрузка списка проектов для управления
-    async function loadManageList() {
-      const listEl = document.getElementById("manage-list");
-      try {
-        const res = await fetch("projects.json?v=" + Date.now());
-        const projects = await res.json();
-        if (!projects.length) {
-          listEl.innerHTML = "<small style='color:#666;'>Пока нет ни одного проекта.</small>";
-          return;
-        }
-        listEl.innerHTML = projects.map((p, idx) => `
-          <div style="border: 2px solid #333; padding: 10px; background: ${p.hidden ? '#e0e0e0' : '#f9f9f9'}; opacity: ${p.hidden ? '0.75' : '1'};">
-            <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">
-              ${p.hidden ? '🙈 [СКРЫТ] ' : ''}${p.title}
-            </div>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-              <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
-                <option value="obmer" ${p.category === 'obmer' ? 'selected' : ''}>📐 Обмеры</option>
-                <option value="electrika" ${p.category === 'electrika' ? 'selected' : ''}>⚡ Электрика</option>
-                <option value="avtonomka" ${p.category === 'avtonomka' ? 'selected' : ''}>🔋 Автономка</option>
-                <option value="remont" ${p.category === 'remont' ? 'selected' : ''}>🦺 Ремонт</option>
-              </select>
-              <button type="button" onclick="toggleHideProject(${idx})" style="background: ${p.hidden ? '#47ed84' : '#f7e83e'}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                ${p.hidden ? '👁️ Показать' : '🙈 Скрыть'}
-              </button>
-              <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                🗑️ Удалить
-              </button>
-            </div>
-          </div>
-        `).join("");
-      } catch (e) {
-        listEl.innerHTML = "<small style='color:#666;'>Не удалось загрузить список.</small>";
-      }
-    }
-
-    // Скрыть или показать проект на сайте
-    async function toggleHideProject(index) {
-      const token = tokenInput.value.trim();
-      if (!token) return showStatus("Введите GitHub Token!", "status-err");
-      showStatus("⏳ Меняю видимость проекта...", "status-load");
-      try {
-        const existing = await ghApi("projects.json", "GET", null, token);
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects[index].hidden = !projects[index].hidden;
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Toggle project visibility", content: updatedBase64, sha: existing.sha }, token);
-        showStatus(projects[index].hidden ? "🙈 Проект скрыт с сайта!" : "👁️ Проект снова виден на сайте!", "status-ok");
-        loadManageList();
-      } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-      }
-    }
-
-    // Перенос проекта в другую категорию
-    async function moveProject(index, newCategory) {
-      const token = tokenInput.value.trim();
-      if (!token) return showStatus("Введите GitHub Token!", "status-err");
-      showStatus("⏳ Переношу проект в другой раздел...", "status-load");
-      try {
-        const existing = await ghApi("projects.json", "GET", null, token);
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects[index].category = newCategory;
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Move project category", content: updatedBase64, sha: existing.sha }, token);
-        showStatus("✅ Раздел изменён! Обновится на сайте через 30 секунд.", "status-ok");
-        ();
-      } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-      }
-    }
-
-    // Удаление проекта с сайта
-    async function deleteProject(index) {
-      if (!confirm("Точно удалить этот проект с сайта?")) return;
-      const token = tokenInput.value.trim();
-      if (!token) return showStatus("Введите GitHub Token!", "status-err");
-      showStatus("⏳ Удаляю проект...", "status-load");
-      try {
-        const existing = await ghApi("projects.json", "GET", null, token);
-        const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-        projects.splice(index, 1);
-        const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-        await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha }, token);
-        showStatus("✅ Проект удалён с сайта!", "status-ok");
-        ();
-      } catch (err) {
-        showStatus("❌ " + err.message, "status-err");
-      }
-    }
-
-    ();
-
-  </script>
-</body>
-</html>
