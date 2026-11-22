@@ -1,5 +1,20 @@
 [
   {
+    "category": "remont",
+    "title": "Торговая Галерея",
+    "location": "Сочи",
+    "description": "- Проектирование освещения для магазина одежды;\n- электромонтажные работы.",
+    "images": [
+      "img/projects/1795306821539_1.jpg",
+      "img/projects/1795306821539_2.jpg",
+      "img/projects/1795306821539_3.jpg",
+      "img/projects/1795306821539_4.jpg",
+      "img/projects/1795306821539_5.jpg"
+    ],
+    "hidden": false,
+    "date": "22.11.2026"
+  },
+  {
     "category": "obmer",
     "title": "Обмер Ресторана",
     "location": "Дагомыс",
