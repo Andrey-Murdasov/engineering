@@ -1,5 +1,32 @@
 [
   {
+    "category": "remont",
+    "title": "Магазин одежды: Торговая Галерея",
+    "location": "Сочи",
+    "description": "- Перезд магазина на новое место аренды;\n- косметический ремонт: заделка дыр на стенах от прошлого оборудовния, шпатлевание, покраска; \n- изготовление и монтаж вешал на подвесах потолочных; \n- возведение ширмы; \n- перевоз и демонтаж/монтаж торгового оборудования.",
+    "video": "",
+    "images": [
+      "img/projects/1795314013157_01.jpg",
+      "img/projects/1795314013157_02.jpg",
+      "img/projects/1795314013157_03.jpg",
+      "img/projects/1795314013157_04.jpg",
+      "img/projects/1795314013157_05.jpg",
+      "img/projects/1795314013157_06.jpg",
+      "img/projects/1795314013157_07.jpg",
+      "img/projects/1795314013157_08.jpg",
+      "img/projects/1795314013157_09.jpg",
+      "img/projects/1795314013157_10.jpg",
+      "img/projects/1795314013157_11.jpg",
+      "img/projects/1795314013157_12.jpg",
+      "img/projects/1795314013157_13.jpg",
+      "img/projects/1795314013157_14.jpg",
+      "img/projects/1795314013157_15.jpg",
+      "img/projects/1795314013157_16.jpg"
+    ],
+    "hidden": false,
+    "date": "22.11.2026"
+  },
+  {
     "category": "electrika",
     "title": "Торговая Галерея",
     "location": "Сочи",
