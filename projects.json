@@ -1,5 +1,36 @@
 [
   {
+    "category": "remont",
+    "title": "Магазин одежды Торговая Галерея",
+    "location": "Сочи",
+    "description": "- Перезд магазина с одного места на другое;\n- косметический ремонт: заделка дыр на стенах от прошлого оборудовния, шпатлевание, покраска;\n- изготовление и монтаж подвесов потолочных для вещей;\n- монтаж электрики;\n- возведение ширмы;\n- перевоз оборудования.",
+    "images": [
+      "img/projects/1795311163158_1.jpg",
+      "img/projects/1795311163158_2.jpg",
+      "img/projects/1795311163158_3.jpg",
+      "img/projects/1795311163158_4.jpg",
+      "img/projects/1795311163158_5.jpg",
+      "img/projects/1795311163158_6.jpg",
+      "img/projects/1795311163158_7.jpg",
+      "img/projects/1795311163158_8.jpg",
+      "img/projects/1795311163158_9.jpg",
+      "img/projects/1795311163158_10.jpg",
+      "img/projects/1795311163158_11.jpg",
+      "img/projects/1795311163158_12.jpg",
+      "img/projects/1795311163158_13.jpg",
+      "img/projects/1795311163158_14.jpg",
+      "img/projects/1795311163158_15.jpg",
+      "img/projects/1795311163158_16.jpg",
+      "img/projects/1795311163158_17.jpg",
+      "img/projects/1795311163158_18.jpg",
+      "img/projects/1795311163158_19.jpg",
+      "img/projects/1795311163158_20.jpg",
+      "img/projects/1795311163158_21.jpg"
+    ],
+    "hidden": false,
+    "date": "22.11.2026"
+  },
+  {
     "category": "electrika",
     "title": "Торговая Галерея",
     "location": "Сочи",
