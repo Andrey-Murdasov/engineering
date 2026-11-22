@@ -328,6 +328,13 @@ async function loadManageList() {
         <div style="border: 2px solid #333; padding: 10px; background: ${bg}; opacity: ${op};">
           <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">${mark}${p.title}</div>
           <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button type="button" onclick="reorderProject(${idx}, -1)" title="Поднять выше" style="background: #fff; color: #111; border: 2px solid #111; padding: 4px 8px; font-size: 13px; font-weight: 800; cursor: pointer;">
+              ⬆️
+            </button>
+            <button type="button" onclick="reorderProject(${idx}, 1)" title="Опустить ниже" style="background: #fff; color: #111; border: 2px solid #111; padding: 4px 8px; font-size: 13px; font-weight: 800; cursor: pointer;">
+              ⬇️
+            </button>
+
             <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
               <option value="obmer" ${p.category === "obmer" ? "selected" : ""}>📐 Обмеры</option>
               <option value="electrika" ${p.category === "electrika" ? "selected" : ""}>⚡ Электрика</option>
@@ -392,6 +399,43 @@ async function deleteProject(index) {
     const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
     await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha });
     showStatus("✅ Проект удалён!", "status-ok");
+    loadManageList();
+  } catch (err) {
+    showStatus("❌ " + err.message, "status-err");
+  }
+}
+
+// Перемещение проекта выше или ниже внутри своего раздела
+async function reorderProject(index, direction) {
+  showStatus("⏳ Меняю порядок проектов...", "status-load");
+  try {
+    const existing = await ghApi("projects.json", "GET");
+    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
+    const currentCat = projects[index].category;
+
+    // Ищем ближайший проект из этой же категории в нужном направлении (-1 вверх, +1 вниз)
+    let targetIndex = -1;
+    for (let i = index + direction; i >= 0 && i < projects.length; i += direction) {
+      if (projects[i].category === currentCat) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetIndex === -1) {
+      showStatus("ℹ️ Проект уже стоит на краю списка в этом разделе.", "status-load");
+      return;
+    }
+
+    // Меняем проекты местами
+    const temp = projects[index];
+    projects[index] = projects[targetIndex];
+    projects[targetIndex] = temp;
+
+    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
+    await ghApi("projects.json", "PUT", { message: "Reorder projects", content: updatedBase64, sha: existing.sha });
+
+    showStatus("✅ Порядок обновлён! На сайте изменится через 30 сек.", "status-ok");
     loadManageList();
   } catch (err) {
     showStatus("❌ " + err.message, "status-err");
