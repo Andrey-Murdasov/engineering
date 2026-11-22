@@ -65,6 +65,13 @@
         <input type="file" id="p-photos" accept="image/*" multiple class="retro-input" style="padding: 8px; margin-bottom: 10px;">
         <div id="photo-queue" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 18px;"></div>
 
+        <label>🛡️ Режим водяного знака на новых фото:</label>
+        <select id="p-watermark" class="retro-input">
+          <option value="grid" selected>1. Диагональная сетка по всему фото</option>
+          <option value="center">2. Крупная полупрозрачная подпись по центру</option>
+          <option value="none">3. Без водяного знака (чистое фото)</option>
+        </select>
+        
         <label>6. Ссылка на видеообзор (необязательно):</label>
         <input type="text" id="p-video" class="retro-input" placeholder="Ссылка на YouTube, RuTube или VK Видео">
 
@@ -91,6 +98,7 @@
     </div>
   </div>
 
+  <script src="js/watermark.js"></script>
   <script src="js/admin.js"></script>
 </body>
 </html>
