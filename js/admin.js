@@ -56,7 +56,7 @@ document.getElementById("logout-btn").addEventListener("click", function() {
   showStatus("🔒 Вы вышли из системы.", "status-load");
 });
 
-function compressImage(file) {
+function compressImage(file, wmMode) {
   return new Promise(function(resolve) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -74,36 +74,10 @@ function compressImage(file) {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
 
-                // === ДИАГОНАЛЬНАЯ СЕТКА ВОДЯНЫХ ЗНАКОВ ===
-        const wmText = "Андрей Мурдасов | Сочи • @murdasov_st";
-        const fontSize = Math.max(16, Math.round(w * 0.026));
-        ctx.save();
-        ctx.font = "bold " + fontSize + "px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        // Поворачиваем холст на -25 градусов для диагонального нанесения
-        ctx.translate(w / 2, h / 2);
-        ctx.rotate((-25 * Math.PI) / 180);
-
-        const stepX = Math.round(ctx.measureText(wmText).width * 1.45);
-        const stepY = Math.round(fontSize * 6.5);
-        const diag = Math.ceil(Math.sqrt(w * w + h * h));
-
-        for (let y = -diag; y <= diag; y += stepY) {
-          // Смещаем четные ряды в шахматном порядке
-          const shiftX = (Math.abs(Math.round(y / stepY)) % 2) * (stepX / 2);
-          for (let x = -diag; x <= diag; x += stepX) {
-            // Тёмная тень для читаемости на светлых стенах и чертежах
-            ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
-            ctx.fillText(wmText, x + shiftX + 2, y + 2);
-            // Полупрозрачный белый текст поверх
-            ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
-            ctx.fillText(wmText, x + shiftX, y);
-          }
+        // Вызов внешнего модуля водяных знаков
+        if (typeof applyWatermark === "function") {
+          applyWatermark(ctx, w, h, wmMode);
         }
-        ctx.restore();
-        // ==========================================
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
         resolve(dataUrl.split(",")[1]);
@@ -113,6 +87,7 @@ function compressImage(file) {
     reader.readAsDataURL(file);
   });
 }
+
 
 
 async function ghApi(path, method, body) {
@@ -253,8 +228,10 @@ document.getElementById("project-form").addEventListener("submit", async functio
       } else {
         // Новое фото сжимаем и загружаем
         showStatus("⏳ Загружаю новое фото " + (i + 1) + " из " + selectedFiles.length + "...", "status-load");
-        const base64Content = await compressImage(item.file);
+        const wmMode = document.getElementById("p-watermark").value;
+        const base64Content = await compressImage(item.file, wmMode);
         const fileName = "img/projects/" + timestamp + "_" + String(i + 1).padStart(2, "0") + ".jpg";
+
         await ghApi(fileName, "PUT", {
           message: "Add photo " + timestamp + "_" + (i + 1),
           content: base64Content
