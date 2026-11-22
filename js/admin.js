@@ -75,7 +75,7 @@ function compressImage(file) {
         ctx.drawImage(img, 0, 0, w, h);
 
                 // === ДИАГОНАЛЬНАЯ СЕТКА ВОДЯНЫХ ЗНАКОВ ===
-        const wmText = "Андрей Мурдасов | Сочи • +7 (965) 475-11-77";
+        const wmText = "Андрей Мурдасов | Сочи • @murdasov_st";
         const fontSize = Math.max(16, Math.round(w * 0.026));
         ctx.save();
         ctx.font = "bold " + fontSize + "px sans-serif";
