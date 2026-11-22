@@ -100,7 +100,7 @@ function compressImage(file) {
         // ====================================
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
-        resolve(dataUrl.split(","));
+        resolve(dataUrl.split(",")[1]);
       };
       img.src = e.target.result;
     };
