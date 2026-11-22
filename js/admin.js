@@ -137,10 +137,13 @@ async function ghApi(path, method, body) {
   return res.json();
 }
 
-let selectedFiles = [];
+let selectedFiles = []; // Элементы вида { file: File|null, preview: string, existingPath: string|null }
+let editingIndex = null; // null = новый проект, число = индекс редактируемого проекта
 
 const photoInput = document.getElementById("p-photos");
 const queueEl = document.getElementById("photo-queue");
+const submitBtn = document.getElementById("submit-btn");
+const cancelEditBtn = document.getElementById("cancel-edit-btn");
 
 function renderPhotoQueue() {
   if (!selectedFiles.length) {
@@ -181,36 +184,86 @@ photoInput.addEventListener("change", function() {
   files.forEach(function(file) {
     selectedFiles.push({
       file: file,
-      preview: URL.createObjectURL(file)
+      preview: URL.createObjectURL(file),
+      existingPath: null
     });
   });
-  photoInput.value = ""; // Очищаем input, чтобы можно было докидывать фото по одному
+  photoInput.value = "";
   renderPhotoQueue();
 });
 
+// Активация режима редактирования существующего проекта
+window.startEditProject = async function(idx) {
+  try {
+    const res = await fetch("projects.json?v=" + Date.now());
+    const projects = await res.json();
+    const p = projects[idx];
+    if (!p) return;
+
+    editingIndex = idx;
+    document.getElementById("p-category").value = p.category || "obmer";
+    document.getElementById("p-title").value = p.title || "";
+    document.getElementById("p-location").value = p.location || "";
+    document.getElementById("p-desc").value = p.description || "";
+    document.getElementById("p-video").value = p.video || "";
+
+    const rawImgs = Array.isArray(p.images) ? p.images : (p.image ? [p.image] : []);
+    selectedFiles = rawImgs.map(function(path) {
+      return { file: null, preview: path, existingPath: path };
+    });
+    renderPhotoQueue();
+
+    submitBtn.textContent = "💾 Сохранить изменения";
+    submitBtn.style.background = "#2e7d32"; // Зелёная кнопка
+    cancelEditBtn.style.display = "block";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    showStatus("✏️ Режим редактирования: «" + p.title + "». Поменяйте порядок фото или текст и нажмите «Сохранить изменения».", "status-load");
+  } catch (err) {
+    showStatus("❌ Не удалось загрузить данные проекта для редактирования.", "status-err");
+  }
+};
+
+window.cancelEdit = function() {
+  editingIndex = null;
+  document.getElementById("project-form").reset();
+  selectedFiles = [];
+  renderPhotoQueue();
+  submitBtn.textContent = "🚀 Опубликовать проект на сайте";
+  submitBtn.style.background = "#db5323";
+  cancelEditBtn.style.display = "none";
+  document.getElementById("status").style.display = "none";
+};
+
 document.getElementById("project-form").addEventListener("submit", async function(e) {
   e.preventDefault();
-  if (!selectedFiles.length) return showStatus("Выберите хотя бы одно фото!", "status-err");
+  if (!selectedFiles.length) return showStatus("Должно быть хотя бы одно фото!", "status-err");
 
-  const btn = document.getElementById("submit-btn");
-  btn.disabled = true;
+  submitBtn.disabled = true;
 
   try {
-    const uploadedPaths = [];
+    const finalPaths = [];
     const timestamp = Date.now();
 
     for (let i = 0; i < selectedFiles.length; i++) {
-      showStatus("⏳ Загружаю фото " + (i + 1) + " из " + selectedFiles.length + "...", "status-load");
-      const base64Content = await compressImage(selectedFiles[i].file);
-      const fileName = "img/projects/" + timestamp + "_" + String(i + 1).padStart(2, "0") + ".jpg";
-      await ghApi(fileName, "PUT", {
-        message: "Add photo " + timestamp + "_" + (i + 1),
-        content: base64Content
-      });
-      uploadedPaths.push(fileName);
+      const item = selectedFiles[i];
+      if (item.existingPath) {
+        // Уже загруженное ранее фото просто сохраняем в новом порядке
+        finalPaths.push(item.existingPath);
+      } else {
+        // Новое фото сжимаем и загружаем
+        showStatus("⏳ Загружаю новое фото " + (i + 1) + " из " + selectedFiles.length + "...", "status-load");
+        const base64Content = await compressImage(item.file);
+        const fileName = "img/projects/" + timestamp + "_" + String(i + 1).padStart(2, "0") + ".jpg";
+        await ghApi(fileName, "PUT", {
+          message: "Add photo " + timestamp + "_" + (i + 1),
+          content: base64Content
+        });
+        finalPaths.push(fileName);
+      }
     }
 
-    showStatus("⏳ Обновляю ленту проектов...", "status-load");
+    showStatus("⏳ Сохраняю базу проектов...", "status-load");
     let projects = [];
     let sha = null;
     try {
@@ -221,120 +274,40 @@ document.getElementById("project-form").addEventListener("submit", async functio
       projects = [];
     }
 
-    projects.unshift({
+    const projectData = {
       category: document.getElementById("p-category").value,
       title: document.getElementById("p-title").value.trim(),
       location: document.getElementById("p-location").value.trim(),
       description: document.getElementById("p-desc").value.trim(),
       video: document.getElementById("p-video").value.trim(),
-      images: uploadedPaths,
-      hidden: false,
-      date: new Date().toLocaleDateString("ru-RU")
-    });
+      images: finalPaths,
+      hidden: editingIndex !== null ? Boolean(projects[editingIndex].hidden) : false,
+      date: editingIndex !== null ? (projects[editingIndex].date || new Date().toLocaleDateString("ru-RU")) : new Date().toLocaleDateString("ru-RU")
+    };
+
+    if (editingIndex !== null) {
+      projects[editingIndex] = projectData;
+    } else {
+      projects.unshift(projectData);
+    }
 
     const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-    const putBody = { message: "Add project", content: updatedBase64 };
+    const putBody = { message: editingIndex !== null ? "Edit project" : "Add project", content: updatedBase64 };
     if (sha) putBody.sha = sha;
 
     await ghApi("projects.json", "PUT", putBody);
 
-    showStatus("✅ Готово! Проект опубликован (появится на сайте через 30 сек).", "status-ok");
-    document.getElementById("project-form").reset();
-    selectedFiles = [];
-    renderPhotoQueue();
+    const wasEdit = editingIndex !== null;
+    cancelEdit();
+    showStatus(wasEdit ? "✅ Изменения сохранены! Обновится на сайте через 30 сек." : "✅ Готово! Проект опубликован!", "status-ok");
     loadManageList();
+                <button type="button" onclick="startEditProject(${idx})" style="background: #69cafa; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
+              ✏️ Изменить
+            </button>
+
   } catch (err) {
     showStatus("❌ " + err.message, "status-err");
   } finally {
-    btn.disabled = false;
+    submitBtn.disabled = false;
   }
 });
-
-async function loadManageList() {
-  const listEl = document.getElementById("manage-list");
-  try {
-    const res = await fetch("projects.json?v=" + Date.now());
-    const projects = await res.json();
-    if (!projects.length) {
-      listEl.innerHTML = "<small style='color:#666;'>Пока нет ни одного проекта.</small>";
-      return;
-    }
-    listEl.innerHTML = projects.map(function(p, idx) {
-      const bg = p.hidden ? "#e0e0e0" : "#f9f9f9";
-      const op = p.hidden ? "0.8" : "1";
-      const mark = p.hidden ? "🙈 [СКРЫТ] " : "";
-      const hideBtnBg = p.hidden ? "#47ed84" : "#f7e83e";
-      const hideBtnText = p.hidden ? "👁️ Показать" : "🙈 Скрыть";
-      return `
-        <div style="border: 2px solid #333; padding: 10px; background: ${bg}; opacity: ${op};">
-          <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">${mark}${p.title}</div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
-              <option value="obmer" ${p.category === "obmer" ? "selected" : ""}>📐 Обмеры</option>
-              <option value="electrika" ${p.category === "electrika" ? "selected" : ""}>⚡ Электрика</option>
-              <option value="avtonomka" ${p.category === "avtonomka" ? "selected" : ""}>🔋 Автономка</option>
-              <option value="remont" ${p.category === "remont" ? "selected" : ""}>🦺 Ремонт</option>
-            </select>
-            <button type="button" onclick="toggleHideProject(${idx})" style="background: ${hideBtnBg}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-              ${hideBtnText}
-            </button>
-            <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-              🗑️ Удалить
-            </button>
-          </div>
-        </div>
-      `;
-    }).join("");
-  } catch (e) {
-    listEl.innerHTML = "<small style='color:#666;'>Список проектов пуст или загружается.</small>";
-  }
-}
-
-async function moveProject(index, newCategory) {
-  showStatus("⏳ Переношу проект...", "status-load");
-  try {
-    const existing = await ghApi("projects.json", "GET");
-    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-    projects[index].category = newCategory;
-    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-    await ghApi("projects.json", "PUT", { message: "Move project", content: updatedBase64, sha: existing.sha });
-    showStatus("✅ Проект перенесён!", "status-ok");
-    loadManageList();
-  } catch (err) {
-    showStatus("❌ " + err.message, "status-err");
-  }
-}
-
-async function toggleHideProject(index) {
-  showStatus("⏳ Меняю видимость...", "status-load");
-  try {
-    const existing = await ghApi("projects.json", "GET");
-    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-    projects[index].hidden = !projects[index].hidden;
-    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-    await ghApi("projects.json", "PUT", { message: "Toggle visibility", content: updatedBase64, sha: existing.sha });
-    showStatus(projects[index].hidden ? "🙈 Проект скрыт с сайта!" : "👁️ Проект снова виден!", "status-ok");
-    loadManageList();
-  } catch (err) {
-    showStatus("❌ " + err.message, "status-err");
-  }
-}
-
-async function deleteProject(index) {
-  if (!confirm("Точно удалить этот проект?")) return;
-  showStatus("⏳ Удаляю проект...", "status-load");
-  try {
-    const existing = await ghApi("projects.json", "GET");
-    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
-    projects.splice(index, 1);
-    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
-    await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha });
-    showStatus("✅ Проект удалён!", "status-ok");
-    loadManageList();
-  } catch (err) {
-    showStatus("❌ " + err.message, "status-err");
-  }
-}
-
-verifyAndOpenGate(localStorage.getItem(TOKEN_KEY), false);
-loadManageList();
