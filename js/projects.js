@@ -112,7 +112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ${videoBtnHtml}
             <div class="project-meta">
               ${item.location ? `📍 ${item.location}` : ""} 
-              ${item.date ? ` • 📅 ${item.date}` : ""}
+            
           </div>
         </div>
       `;
