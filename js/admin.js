@@ -71,15 +71,43 @@ function compressImage(file) {
         }
         canvas.width = w;
         canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // === АВТОМАТИЧЕСКИЙ ВОДЯНОЙ ЗНАК ===
+        const wmText = "Андрей Мурдасов|Сочи • @murdasov_st";
+        const fontSize = Math.max(14, Math.round(w * 0.022));
+        ctx.font = "bold " + fontSize + "px sans-serif";
+
+        const padX = Math.round(fontSize * 0.8);
+        const padY = Math.round(fontSize * 0.5);
+        const textWidth = ctx.measureText(wmText).width;
+        const boxW = textWidth + padX * 2;
+        const boxH = fontSize + padY * 2;
+        const margin = Math.round(w * 0.02);
+
+        const boxX = w - boxW - margin;
+        const boxY = h - boxH - margin;
+
+        // Полупрозрачная тёмная подложка для читаемости на любом фоне
+        ctx.fillStyle = "rgba(17, 17, 17, 0.55)";
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+
+        // Белый текст поверх подложки
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.textBaseline = "middle";
+        ctx.fillText(wmText, boxX + padX, boxY + boxH / 2);
+        // ====================================
+
         const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
-        resolve(dataUrl.split(",")[1]);
+        resolve(dataUrl.split(","));
       };
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   });
 }
+
 
 async function ghApi(path, method, body) {
   const token = getToken();
