@@ -74,30 +74,36 @@ function compressImage(file) {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
 
-        // === АВТОМАТИЧЕСКИЙ ВОДЯНОЙ ЗНАК ===
-        const wmText = "Андрей Мурдасов|Сочи • @murdasov_st";
-        const fontSize = Math.max(14, Math.round(w * 0.022));
+                // === ДИАГОНАЛЬНАЯ СЕТКА ВОДЯНЫХ ЗНАКОВ ===
+        const wmText = "Андрей Мурдасов | Сочи • +7 (965) 475-11-77";
+        const fontSize = Math.max(16, Math.round(w * 0.026));
+        ctx.save();
         ctx.font = "bold " + fontSize + "px sans-serif";
-
-        const padX = Math.round(fontSize * 0.8);
-        const padY = Math.round(fontSize * 0.5);
-        const textWidth = ctx.measureText(wmText).width;
-        const boxW = textWidth + padX * 2;
-        const boxH = fontSize + padY * 2;
-        const margin = Math.round(w * 0.02);
-
-        const boxX = w - boxW - margin;
-        const boxY = h - boxH - margin;
-
-        // Полупрозрачная тёмная подложка для читаемости на любом фоне
-        ctx.fillStyle = "rgba(17, 17, 17, 0.55)";
-        ctx.fillRect(boxX, boxY, boxW, boxH);
-
-        // Белый текст поверх подложки
-        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(wmText, boxX + padX, boxY + boxH / 2);
-        // ====================================
+
+        // Поворачиваем холст на -25 градусов для диагонального нанесения
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate((-25 * Math.PI) / 180);
+
+        const stepX = Math.round(ctx.measureText(wmText).width * 1.45);
+        const stepY = Math.round(fontSize * 6.5);
+        const diag = Math.ceil(Math.sqrt(w * w + h * h));
+
+        for (let y = -diag; y <= diag; y += stepY) {
+          // Смещаем четные ряды в шахматном порядке
+          const shiftX = (Math.abs(Math.round(y / stepY)) % 2) * (stepX / 2);
+          for (let x = -diag; x <= diag; x += stepX) {
+            // Тёмная тень для читаемости на светлых стенах и чертежах
+            ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+            ctx.fillText(wmText, x + shiftX + 2, y + 2);
+            // Полупрозрачный белый текст поверх
+            ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+            ctx.fillText(wmText, x + shiftX, y);
+          }
+        }
+        ctx.restore();
+        // ==========================================
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
         resolve(dataUrl.split(",")[1]);
