@@ -301,46 +301,102 @@ document.getElementById("project-form").addEventListener("submit", async functio
     cancelEdit();
     showStatus(wasEdit ? "✅ Изменения сохранены! Обновится на сайте через 30 сек." : "✅ Готово! Проект опубликован!", "status-ok");
    
-    async function loadManageList() {
-      const listEl = document.getElementById("manage-list");
-      try {
-        const res = await fetch("projects.json?v=" + Date.now());
-        const projects = await res.json();
-        if (!projects.length) {
-          listEl.innerHTML = "<small style='color:#666;'>Пока нет ни одного проекта.</small>";
-          return;
-          }
-          listEl.innerHTML = projects.map(function(p, idx) {
-            const bg = p.hidden ? "#e0e0e0" : "#f9f9f9";
-            const op = p.hidden ? "0.8" : "1";
-            const mark = p.hidden ? "🙈 [СКРЫТ] " : "";
-            const hideBtnBg = p.hidden ? "#47ed84" : "#f7e83e";
-            const hideBtnText = p.hidden ? "👁️ Показать" : "🙈 Скрыть";
-            return `
-              <div style="border: 2px solid #333; padding: 10px; background: ${bg}; opacity: ${op};">
-                <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">${mark}${p.title}</div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                  <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
-                    <option value="obmer" ${p.category === "obmer" ? "selected" : ""}>📐 Обмеры</option>
-                    <option value="electrika" ${p.category === "electrika" ? "selected" : ""}>⚡ Электрика</option>
-                    <option value="avtonomka" ${p.category === "avtonomka" ? "selected" : ""}>🔋 Автономка</option>
-                    <option value="remont" ${p.category === "remont" ? "selected" : ""}>🦺 Ремонт</option>
-                  </select>
-                  <button type="button" onclick="startEditProject(${idx})" style="background: #69cafa; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                    ✏️ Изменить
-                  </button>
-                  <button type="button" onclick="toggleHideProject(${idx})" style="background: ${hideBtnBg}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                    ${hideBtnText}
-                  </button>
-                  <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
-                    🗑️ Удалить
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join("");
-        } catch (e) {
-          listEl.innerHTML = "<small style='color:#666;'>Список проектов пуст или загружается.</small>";
-        }
-      }
+       loadManageList();
+  } catch (err) {
+    showStatus("❌ " + err.message, "status-err");
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
 
+async function loadManageList() {
+  const listEl = document.getElementById("manage-list");
+  try {
+    const res = await fetch("projects.json?v=" + Date.now());
+    const projects = await res.json();
+    if (!projects.length) {
+      listEl.innerHTML = "<small style='color:#666;'>Пока нет ни одного проекта.</small>";
+      return;
+    }
+    listEl.innerHTML = projects.map(function(p, idx) {
+      const bg = p.hidden ? "#e0e0e0" : "#f9f9f9";
+      const op = p.hidden ? "0.8" : "1";
+      const mark = p.hidden ? "🙈 [СКРЫТ] " : "";
+      const hideBtnBg = p.hidden ? "#47ed84" : "#f7e83e";
+      const hideBtnText = p.hidden ? "👁️ Показать" : "🙈 Скрыть";
+      return `
+        <div style="border: 2px solid #333; padding: 10px; background: ${bg}; opacity: ${op};">
+          <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">${mark}${p.title}</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <select onchange="moveProject(${idx}, this.value)" style="padding: 4px; border: 2px solid #333; font-size: 13px; font-weight: 700;">
+              <option value="obmer" ${p.category === "obmer" ? "selected" : ""}>📐 Обмеры</option>
+              <option value="electrika" ${p.category === "electrika" ? "selected" : ""}>⚡ Электрика</option>
+              <option value="avtonomka" ${p.category === "avtonomka" ? "selected" : ""}>🔋 Автономка</option>
+              <option value="remont" ${p.category === "remont" ? "selected" : ""}>🦺 Ремонт</option>
+            </select>
+            <button type="button" onclick="startEditProject(${idx})" style="background: #69cafa; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
+              ✏️ Изменить
+            </button>
+            <button type="button" onclick="toggleHideProject(${idx})" style="background: ${hideBtnBg}; color: #111; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
+              ${hideBtnText}
+            </button>
+            <button type="button" onclick="deleteProject(${idx})" style="background: #ff5252; color: #fff; border: 2px solid #111; padding: 4px 10px; font-size: 13px; font-weight: 700; cursor: pointer;">
+              🗑️ Удалить
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (e) {
+    listEl.innerHTML = "<small style='color:#666;'>Список проектов пуст или загружается.</small>";
+  }
+}
+
+async function moveProject(index, newCategory) {
+  showStatus("⏳ Переношу проект...", "status-load");
+  try {
+    const existing = await ghApi("projects.json", "GET");
+    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
+    projects[index].category = newCategory;
+    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
+    await ghApi("projects.json", "PUT", { message: "Move project", content: updatedBase64, sha: existing.sha });
+    showStatus("✅ Проект перенесён!", "status-ok");
+    loadManageList();
+  } catch (err) {
+    showStatus("❌ " + err.message, "status-err");
+  }
+}
+
+async function toggleHideProject(index) {
+  showStatus("⏳ Меняю видимость...", "status-load");
+  try {
+    const existing = await ghApi("projects.json", "GET");
+    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
+    projects[index].hidden = !projects[index].hidden;
+    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
+    await ghApi("projects.json", "PUT", { message: "Toggle visibility", content: updatedBase64, sha: existing.sha });
+    showStatus(projects[index].hidden ? "🙈 Проект скрыт с сайта!" : "👁️ Проект снова виден!", "status-ok");
+    loadManageList();
+  } catch (err) {
+    showStatus("❌ " + err.message, "status-err");
+  }
+}
+
+async function deleteProject(index) {
+  if (!confirm("Точно удалить этот проект?")) return;
+  showStatus("⏳ Удаляю проект...", "status-load");
+  try {
+    const existing = await ghApi("projects.json", "GET");
+    const projects = JSON.parse(decodeURIComponent(escape(atob(existing.content))));
+    projects.splice(index, 1);
+    const updatedBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(projects, null, 2))));
+    await ghApi("projects.json", "PUT", { message: "Delete project", content: updatedBase64, sha: existing.sha });
+    showStatus("✅ Проект удалён!", "status-ok");
+    loadManageList();
+  } catch (err) {
+    showStatus("❌ " + err.message, "status-err");
+  }
+}
+
+verifyAndOpenGate(localStorage.getItem(TOKEN_KEY), false);
+loadManageList();
