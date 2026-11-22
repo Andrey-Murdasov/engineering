@@ -1,3 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /add.html
+Disallow: /projects.json
+
 Sitemap: https://andrey-murdasov.github.io/engineering/sitemap.xml
