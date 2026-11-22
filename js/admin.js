@@ -176,6 +176,7 @@ document.getElementById("project-form").addEventListener("submit", async functio
       title: document.getElementById("p-title").value.trim(),
       location: document.getElementById("p-location").value.trim(),
       description: document.getElementById("p-desc").value.trim(),
+      video: document.getElementById("p-video").value.trim(),
       images: uploadedPaths,
       hidden: false,
       date: new Date().toLocaleDateString("ru-RU")
