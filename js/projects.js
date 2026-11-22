@@ -93,6 +93,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           imgs.map((src, idx) => `<img src="${src}" data-idx="${idx}" style="width:44px; height:34px; object-fit:cover; border:2px solid #333; cursor:pointer;" alt="Фото ${idx + 1}">`).join("") +
           `</div>`;
       }
+      
+      const videoBtnHtml = item.video
+        ? `<a href="${item.video}" target="_blank" rel="noopener" class="retro-btn" style="background:#f7e83e;color:#111;margin-bottom:12px;text-align:center;width:100%;">▶️ Смотреть видеообзор</a>`
+        : "";
 
       card.innerHTML = `
         <div class="project-thumb-wrap">
@@ -104,9 +108,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="project-title">${item.title}</div>
             <div class="project-desc">${item.description || ""}</div>
           </div>
-          <div class="project-meta">
-            ${item.location ? `📍 ${item.location}` : ""} 
-            ${item.date ? ` • 📅 ${item.date}` : ""}
+          <div>
+            ${videoBtnHtml}
+            <div class="project-meta">
+              ${item.location ? `📍 ${item.location}` : ""} 
+              ${item.date ? ` • 📅 ${item.date}` : ""}
           </div>
         </div>
       `;
