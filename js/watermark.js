@@ -7,7 +7,7 @@ function applyWatermark(ctx, w, h, mode) {
   if (mode === "center") {
     ctx.save();
 
-    // Современный системный шрифт (San Francisco / Roboto / Segoe UI)
+    // Режим 1: Современный системный шрифт (San Francisco / Roboto / Segoe UI)
     const fontSize = Math.max(18, Math.round(w * 0.032));
     ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
 
