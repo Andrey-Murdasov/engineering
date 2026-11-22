@@ -34,7 +34,7 @@ function applyWatermark(ctx, w, h, mode) {
       ctx.arcTo(boxX, boxY, boxX + boxW, boxY, radius);
       ctx.closePath();
     }
-    ctx.fillStyle = "rgba(255, 255, 255, 0.55)"; // Прозрачность белого фона (0.55)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; // Прозрачность белого фона (0.55)
     ctx.fill();
 
     // Тонкая светлая обводка для эффекта "стекла"
@@ -43,7 +43,7 @@ function applyWatermark(ctx, w, h, mode) {
     ctx.stroke();
 
     // 2. Четкий почти черный текст по центру плашки
-    ctx.fillStyle = "#111111";
+    ctx.fillStyle = "rgba(17, 17, 17, 0.75)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(wmText, w / 2, h / 2 + 1);
