@@ -137,10 +137,60 @@ async function ghApi(path, method, body) {
   return res.json();
 }
 
+let selectedFiles = [];
+
+const photoInput = document.getElementById("p-photos");
+const queueEl = document.getElementById("photo-queue");
+
+function renderPhotoQueue() {
+  if (!selectedFiles.length) {
+    queueEl.innerHTML = "";
+    return;
+  }
+  queueEl.innerHTML = selectedFiles.map(function(item, idx) {
+    return `
+      <div style="border: 2px solid #111; background: #f5f5f5; padding: 5px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 800; margin-bottom: 4px;">№${idx + 1} ${idx === 0 ? "(Главное)" : ""}</div>
+        <img src="${item.preview}" style="width: 100%; height: 75px; object-fit: cover; border: 1px solid #333; margin-bottom: 5px;">
+        <div style="display: flex; justify-content: space-between; gap: 2px;">
+          <button type="button" onclick="moveQueuePhoto(${idx}, -1)" style="flex:1; border:1px solid #111; background:#fff; font-weight:800; cursor:pointer;" ${idx === 0 ? "disabled" : ""}>⬅️</button>
+          <button type="button" onclick="removeQueuePhoto(${idx})" style="flex:1; border:1px solid #111; background:#ff8a80; font-weight:800; cursor:pointer;">✕</button>
+          <button type="button" onclick="moveQueuePhoto(${idx}, 1)" style="flex:1; border:1px solid #111; background:#fff; font-weight:800; cursor:pointer;" ${idx === selectedFiles.length - 1 ? "disabled" : ""}>➡️</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+window.moveQueuePhoto = function(idx, dir) {
+  const target = idx + dir;
+  if (target < 0 || target >= selectedFiles.length) return;
+  const temp = selectedFiles[idx];
+  selectedFiles[idx] = selectedFiles[target];
+  selectedFiles[target] = temp;
+  renderPhotoQueue();
+};
+
+window.removeQueuePhoto = function(idx) {
+  selectedFiles.splice(idx, 1);
+  renderPhotoQueue();
+};
+
+photoInput.addEventListener("change", function() {
+  const files = Array.from(photoInput.files);
+  files.forEach(function(file) {
+    selectedFiles.push({
+      file: file,
+      preview: URL.createObjectURL(file)
+    });
+  });
+  photoInput.value = ""; // Очищаем input, чтобы можно было докидывать фото по одному
+  renderPhotoQueue();
+});
+
 document.getElementById("project-form").addEventListener("submit", async function(e) {
   e.preventDefault();
-  const files = document.getElementById("p-photos").files;
-  if (!files.length) return showStatus("Выберите хотя бы одно фото!", "status-err");
+  if (!selectedFiles.length) return showStatus("Выберите хотя бы одно фото!", "status-err");
 
   const btn = document.getElementById("submit-btn");
   btn.disabled = true;
@@ -149,10 +199,10 @@ document.getElementById("project-form").addEventListener("submit", async functio
     const uploadedPaths = [];
     const timestamp = Date.now();
 
-    for (let i = 0; i < files.length; i++) {
-      showStatus("⏳ Загружаю фото " + (i + 1) + " из " + files.length + "...", "status-load");
-      const base64Content = await compressImage(files[i]);
-      const fileName = "img/projects/" + timestamp + "_" + (i + 1) + ".jpg";
+    for (let i = 0; i < selectedFiles.length; i++) {
+      showStatus("⏳ Загружаю фото " + (i + 1) + " из " + selectedFiles.length + "...", "status-load");
+      const base64Content = await compressImage(selectedFiles[i].file);
+      const fileName = "img/projects/" + timestamp + "_" + String(i + 1).padStart(2, "0") + ".jpg";
       await ghApi(fileName, "PUT", {
         message: "Add photo " + timestamp + "_" + (i + 1),
         content: base64Content
@@ -190,6 +240,8 @@ document.getElementById("project-form").addEventListener("submit", async functio
 
     showStatus("✅ Готово! Проект опубликован (появится на сайте через 30 сек).", "status-ok");
     document.getElementById("project-form").reset();
+    selectedFiles = [];
+    renderPhotoQueue();
     loadManageList();
   } catch (err) {
     showStatus("❌ " + err.message, "status-err");
