@@ -8,7 +8,7 @@ function applyWatermark(ctx, w, h, mode) {
     ctx.save();
 
     // Режим 1: Современный системный шрифт (San Francisco / Roboto / Segoe UI)
-    const fontSize = Math.max(18, Math.round(w * 0.032));
+    const fontSize = Math.max(18, Math.round(w * 0.045)); // Величина букв (0.32-0.45)
     ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
 
     // Считаем размеры текста и отступы (padding) для плашки
@@ -34,7 +34,7 @@ function applyWatermark(ctx, w, h, mode) {
       ctx.arcTo(boxX, boxY, boxX + boxW, boxY, radius);
       ctx.closePath();
     }
-    ctx.fillStyle = "rgba(255, 255, 255, 0.72)"; // Прозрачность белого фона (0.72)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)"; // Прозрачность белого фона (0.55)
     ctx.fill();
 
     // Тонкая светлая обводка для эффекта "стекла"
