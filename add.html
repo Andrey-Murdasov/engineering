@@ -62,7 +62,9 @@
         <textarea id="p-desc" rows="3" class="retro-input" placeholder="Кратко: что сделано, сроки, особенности..."></textarea>
 
         <label>5. Фотографии (можно выбрать несколько):</label>
-        <input type="file" id="p-photos" accept="image/*" multiple required class="retro-input" style="padding: 8px;">
+        <input type="file" id="p-photos" accept="image/*" multiple class="retro-input" style="padding: 8px; margin-bottom: 10px;">
+        <div id="photo-queue" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 18px;"></div>
+
         <label>6. Ссылка на видеообзор (необязательно):</label>
         <input type="text" id="p-video" class="retro-input" placeholder="Ссылка на YouTube, RuTube или VK Видео">
 
