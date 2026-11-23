@@ -76,8 +76,6 @@ function applyWatermark(ctx, w, h, mode) {
         ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
         ctx.fillText(wmText, x + shiftX, y);
       }
-    }
-  
   }
 
   if (mode === "stickers") {
