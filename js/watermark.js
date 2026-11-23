@@ -80,3 +80,94 @@ function applyWatermark(ctx, w, h, mode) {
     ctx.restore();
   }
 }
+
+function applyWatermark(ctx, w, h, mode) {
+  // Режим 3: Диагональная шахматная сетка по всему фото
+  if (!mode || mode === "none") return;
+
+  const wmLines = "Андрей Мурдасов | Сочи\n@murdasov_st".split("\n");
+
+  if (mode === "center") {
+    // Чуть уменьшаем шрифт (0.024 вместо 0.032), чтобы 4 плашки не перекрывали всё фото
+    const fontSize = Math.max(14, Math.round(w * 0.024));
+    const lineHeight = Math.round(fontSize * 1.35);
+    const fontStr = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+
+    ctx.save();
+    ctx.font = fontStr;
+    const maxLineWidth = Math.max(...wmLines.map(line => ctx.measureText(line).width));
+    ctx.restore();
+
+    const padX = Math.round(fontSize * 0.9);
+    const padY = Math.round(fontSize * 0.5);
+    const boxW = maxLineWidth + padX * 2;
+    const boxH = wmLines.length * lineHeight + padY * 2 - (lineHeight - fontSize);
+    const radius = Math.round(boxH * 0.28);
+
+    // Вспомогательная функция отрисовки одной плашки в точке (cx, cy) с углом angleDeg
+    function drawBadge(cx, cy, angleDeg) {
+      ctx.save();
+      ctx.translate(cx, cy); // Переносим центр координат в точку плашки
+      ctx.rotate((angleDeg * Math.PI) / 180); // Поворачиваем в радианах
+
+      const boxX = -boxW / 2;
+      const boxY = -boxH / 2;
+
+      // 1. Полупрозрачный белый фон
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+      } else {
+        ctx.moveTo(boxX + radius, boxY);
+        ctx.arcTo(boxX + boxW, boxY, boxX + boxW, boxY + boxH, radius);
+        ctx.arcTo(boxX + boxW, boxY + boxH, boxX, boxY + boxH, radius);
+        ctx.arcTo(boxX, boxY + boxH, boxX, boxY, radius);
+        ctx.arcTo(boxX, boxY, boxX + boxW, boxY, radius);
+        ctx.closePath();
+      }
+      ctx.fillStyle = "rgba(255, 255, 255, 0.68)";
+      ctx.fill();
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+      ctx.stroke();
+
+      // 2. Текст по центру плашки
+      ctx.font = fontStr;
+      ctx.fillStyle = "rgba(17, 17, 17, 0.80)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const totalTextH = (wmLines.length - 1) * lineHeight;
+      const startY = -totalTextH / 2 + 1;
+
+      wmLines.forEach((line, index) => {
+        ctx.fillText(line, 0, startY + index * lineHeight);
+      });
+
+      ctx.restore();
+    }
+
+    // 4 базовые зоны на фото (в долях от ширины и высоты), чтобы наклейки не слипались
+    const zones = [
+      { x: 0.28, y: 0.25 }, // Верх-лево
+      { x: 0.72, y: 0.30 }, // Верх-право
+      { x: 0.32, y: 0.72 }, // Низ-лево
+      { x: 0.70, y: 0.76 }  // Низ-право
+    ];
+
+    zones.forEach(zone => {
+      // Случайное смещение внутри зоны (±5% от размера фото)
+      const offsetX = (Math.random() - 0.5) * w * 0.1;
+      const offsetY = (Math.random() - 0.5) * h * 0.1;
+
+      // Случайный угол от 5 до 40 градусов
+      const absAngle = 5 + Math.random() * 35;
+      // Случайный знак (+ по часовой или - против часовой)
+      const sign = Math.random() < 0.5 ? -1 : 1;
+
+      drawBadge(w * zone.x + offsetX, h * zone.y + offsetY, absAngle * sign);
+    });
+
+    return;
+  }
