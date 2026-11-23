@@ -1,6 +1,18 @@
 [
   {
     "category": "remont",
+    "title": "тест",
+    "location": "тест",
+    "description": "",
+    "video": "",
+    "images": [
+      "img/projects/1795434563192_01.jpg"
+    ],
+    "hidden": false,
+    "date": "23.11.2026"
+  },
+  {
+    "category": "remont",
     "title": "Освещение витрины Магазина одежды",
     "location": "Сочи",
     "description": "- Комбинированная подсветка витрины: прожекторы потолочные и напольные, светодиодная лента, шинопровод.",
