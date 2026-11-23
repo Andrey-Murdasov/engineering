@@ -216,6 +216,34 @@
 <a href="#feedback-form" class="floating-cta-btn" style="text-decoration:none;">✉️ Связаться</a>
 <a href="index.html#feedback-form" class="floating-cta-btn" style="text-decoration:none;">✉️ Связаться</a>
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.querySelector("#feedback-form form");
+  if (!form) return;
+
+  const GAS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyVcYOAojsFy2Hz3DHtEHKslf8oRDnZw-OpvyGcEa5BSj5n7dv4UzzVi_gINoDtFEeo5A/exec";
+
+  form.addEventListener("submit", function() {
+    const payload = {
+      name: (form.querySelector('[name="name"]') || {}).value || "",
+      contact: (form.querySelector('[name="contact_info"]') || {}).value || "",
+      message: (form.querySelector('[name="message"]') || {}).value || ""
+    };
+
+    if (GAS_WEBHOOK_URL.startsWith("http")) {
+      fetch(GAS_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        keepalive: true,
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+    }
+  });
+});
+</script>
+
+	
   </body>
 </html>
 
