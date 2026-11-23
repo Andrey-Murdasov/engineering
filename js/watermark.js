@@ -48,7 +48,7 @@ function applyWatermark(ctx, w, h, mode) {
     ctx.textBaseline = "middle";
     ctx.fillText(wmText, w / 2, h / 2 + 1);
 
-    ctx.restore();
+  
     return;
   }
 
@@ -77,9 +77,8 @@ function applyWatermark(ctx, w, h, mode) {
         ctx.fillText(wmText, x + shiftX, y);
       }
     }
-    ctx.restore();
+  
   }
-}
 
   if (mode === "stickers") {
     // Режим 3: Хаотичные полупрозрачные белые наклейки (4 шт.)
@@ -91,7 +90,7 @@ function applyWatermark(ctx, w, h, mode) {
     ctx.save();
     ctx.font = fontStr;
     const maxLineWidth = Math.max(...wmLines.map(line => ctx.measureText(line).width));
-    ctx.restore();
+  
 
     const padX = Math.round(fontSize * 0.9);
     const padY = Math.round(fontSize * 0.5);
@@ -137,7 +136,7 @@ function applyWatermark(ctx, w, h, mode) {
         ctx.fillText(line, 0, startY + index * lineHeight);
       });
 
-      ctx.restore();
+    
     }
 
     const zones = [
@@ -157,3 +156,4 @@ function applyWatermark(ctx, w, h, mode) {
     });
     return;
   }
+}
